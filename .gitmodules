@@ -1,0 +1,6 @@
+[submodule "jni/libarchive"]
+	path = jni/libarchive
+	url = https://github.com/libarchive/libarchive.git
+[submodule "jni/libsepol"]
+	path = jni/libsepol
+	url = https://android.googlesource.com/platform/external/libsepol

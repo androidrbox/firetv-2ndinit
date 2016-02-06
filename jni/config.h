@@ -1,0 +1,32 @@
+#ifndef _CONFIG_H
+#define _CONFIG_H
+
+#define HAVE_DECL_INT64_MAX 1
+#define HAVE_DECL_INT64_MIN 1
+#define HAVE_DECL_INTMAX_MAX 1
+#define HAVE_DECL_INTMAX_MIN 1
+#define HAVE_DECL_SIZE_MAX 1
+#define HAVE_DECL_SSIZE_MAX 1
+#define HAVE_DECL_UINT32_MAX 1
+#define HAVE_DECL_UINT64_MAX 1
+#define HAVE_DECL_UINTMAX_MAX 1
+#define HAVE_CHOWN 1
+#define HAVE_FCHMOD 1
+#define HAVE_FCHOWN 1
+#define HAVE_FCNTL_H 1
+#define HAVE_FSTAT 1
+#define HAVE_FTRUNCATE 1
+#define HAVE_LCHOWN 1
+#define HAVE_LINK 1
+#define HAVE_LSTAT 1
+#define HAVE_MKFIFO 1
+#define HAVE_MKNOD 1
+#define HAVE_STRUCT_STAT_ST_BLKSIZE 1
+#define HAVE_STDLIB_H 1
+#define HAVE_SYMLINK 1
+#define HAVE_SYS_CDEFS_H 1
+#define HAVE_WCHAR_H 1
+#define HAVE_WCSCPY 1
+#define HAVE_WCSLEN 1
+
+#endif
