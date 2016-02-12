@@ -4,3 +4,6 @@
 [submodule "jni/libsepol"]
 	path = jni/libsepol
 	url = https://android.googlesource.com/platform/external/libsepol
+[submodule "jni/lzma"]
+	path = jni/lzma
+	url = http://git.tukaani.org/lzma.git

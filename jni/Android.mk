@@ -25,7 +25,8 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 LOCAL_MODULE := 2ndinit
 LOCAL_CFLAGS := -Wall -Os -I. -I$(LOCAL_PATH)/libarchive/libarchive \
-	-I$(LOCAL_PATH)/libsepol/include -I$(LOCAL_PATH)/libsepol/src -DHAVE_CONFIG_H
+	-I$(LOCAL_PATH)/libsepol/include -I$(LOCAL_PATH)/libsepol/src \
+	-I$(LOCAL_PATH)/lzma/src/liblzmadec -DHAVE_CONFIG_H
 LOCAL_LDFLAGS := -Wl,--build-id=0x$(shell git describe --abbrev=40 --always --tags)
 LOCAL_SRC_FILES := 2ndinit.c \
 	libarchive/libarchive/archive_acl.c \
@@ -35,6 +36,7 @@ LOCAL_SRC_FILES := 2ndinit.c \
 	libarchive/libarchive/archive_entry_xattr.c \
 	libarchive/libarchive/archive_read.c \
 	libarchive/libarchive/archive_read_open_filename.c \
+	libarchive/libarchive/archive_read_support_filter_xz.c \
 	libarchive/libarchive/archive_read_support_format_cpio.c \
 	libarchive/libarchive/archive_string.c \
 	libarchive/libarchive/archive_string_sprintf.c \
@@ -58,5 +60,6 @@ LOCAL_SRC_FILES := 2ndinit.c \
 	libsepol/src/sidtab.c \
 	libsepol/src/symtab.c \
 	libsepol/src/util.c \
-	libsepol/src/write.c
+	libsepol/src/write.c \
+	lzma/src/liblzmadec/main.c
 include $(BUILD_EXECUTABLE)

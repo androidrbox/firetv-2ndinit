@@ -17,8 +17,10 @@
 #define HAVE_FSTAT 1
 #define HAVE_FTRUNCATE 1
 #define HAVE_LCHOWN 1
+#define HAVE_LIBLZMADEC 1
 #define HAVE_LINK 1
 #define HAVE_LSTAT 1
+#define HAVE_LZMADEC_H 1
 #define HAVE_MKFIFO 1
 #define HAVE_MKNOD 1
 #define HAVE_STRUCT_STAT_ST_BLKSIZE 1

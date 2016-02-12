@@ -27,7 +27,7 @@
 #include "archive_entry.h"
 #include "sepol/policydb/services.h"
 
-#define RECOVERY_RAMDISK "ramdisk-recovery.cpio"
+#define RECOVERY_RAMDISK "ramdisk-recovery.cpio.lzma"
 #define SYSTEM_RECOVERY_RAMDISK "/system/recovery/" RECOVERY_RAMDISK
 #define MNT_DIR "/mnt"
 #define MNT_RECOVERY_RAMDISK MNT_DIR "/" RECOVERY_RAMDISK
@@ -86,6 +86,7 @@ static void extract_recovery(char *ramdisk_path)
 
     // Open the ramdisk
     struct archive *a = archive_read_new();
+    archive_read_support_filter_lzma(a);
     archive_read_support_format_cpio(a);
     if (archive_read_open_filename(a, ramdisk_path, 4096) == ARCHIVE_OK)
     {
