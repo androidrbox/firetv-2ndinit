@@ -14,11 +14,13 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <stdlib.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #define BYPASS_2NDINIT "/cache/bypass_2ndinit"
+#define DAEMONSU "/system/xbin/daemonsu"
 #define PRIMARY_2NDINIT "/system/recovery/2ndinit"
 #define SECONDARY_2NDINIT "/system/bin/pppd"
 
@@ -34,6 +36,14 @@ int main(int argc, char **argv)
         // If the bypass flag exists, delete the file and boot normally.
         unlink(BYPASS_2NDINIT);
         umount("/cache");
+
+        // Start daemonsu if found
+        if (stat(DAEMONSU, &sStat) == 0 && fork() == 0)
+        {
+            execl(DAEMONSU, DAEMONSU, "--auto-daemon", NULL);
+            exit(1);
+        }
+
         return 0;
     }
     umount("/cache");
