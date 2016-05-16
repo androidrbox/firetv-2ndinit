@@ -147,6 +147,7 @@ static void read_init_map(char *wanted_dev, unsigned long *base)
 
 static unsigned long find_execve(unsigned long image_base)
 {
+#ifdef __aarch64__
     /*===================================
      * execve:
      *
@@ -156,13 +157,22 @@ static unsigned long find_execve(unsigned long image_base)
      * da809400  cneg  x0, x0, hi
      *=================================*/
     const int execve_code[] = { 0xd2801ba8, 0xd4000001, 0xb140041f, 0xda809400 };
+#else
+    /*====================================
+     * execve:
+     *
+     * e1a0c007        mov     ip, r7
+     * e3a0700b        mov     r7, #11
+     *==================================*/
+    const int execve_code[] = { 0xe1a0c007, 0xe3a0700b };
+#endif
     unsigned long i;
 
     for (i = 0; ; i += sizeof(*execve_code))
     {
         unsigned long buffer[2];
 
-        // Read the next 16 bytes
+        // Read the next 8 or 16 bytes
         buffer[0] = ptrace(PTRACE_PEEKTEXT, 1, image_base + i, NULL);
         buffer[1] = ptrace(PTRACE_PEEKTEXT, 1, image_base + i + sizeof(*buffer), NULL);
 
@@ -198,27 +208,45 @@ static void replace_init(void)
     /*
      * Inject the data
      *
-     * 0x00 - argv[0]         - pointer to "/init" @ 0x10
-     * 0x08 - argv[1]/envp[0] - NULL
-     * 0x10 - "/init"
+     * argv[0]         - pointer to "/init"
+     * argv[1]/envp[0] - NULL
+     * "/init"
      */
-    ptrace(PTRACE_POKEDATA, 1, data_inject_address + 0x00, data_inject_address + 0x10);
-    ptrace(PTRACE_POKEDATA, 1, data_inject_address + 0x08, 0);
-    ptrace(PTRACE_POKEDATA, 1, data_inject_address + 0x10, *(unsigned long *)"/init\0\0\0");
+    ptrace(PTRACE_POKEDATA, 1, data_inject_address + (sizeof(void *) * 0), data_inject_address + 0x10);
+    ptrace(PTRACE_POKEDATA, 1, data_inject_address + (sizeof(void *) * 1), 0);
+#ifdef __aarch64__
+    ptrace(PTRACE_POKEDATA, 1, data_inject_address + (sizeof(void *) * 2), *(unsigned long *)"/init\0\0\0");
+#else
+    ptrace(PTRACE_POKEDATA, 1, data_inject_address + (sizeof(void *) * 2), *(unsigned long *)"/ini");
+    ptrace(PTRACE_POKEDATA, 1, data_inject_address + (sizeof(void *) * 3), *(unsigned long *)"t\0\0\0");
+#endif
 
     // Get inits current registers
+#ifdef __aarch64__
     struct iovec ioVec;
     struct user_pt_regs regs[1];
     ioVec.iov_base = regs;
     ioVec.iov_len = sizeof(*regs);
     ptrace(PTRACE_GETREGSET, 1, NT_PRSTATUS, &ioVec);
+#else
+    struct pt_regs regs;
+    ptrace(PTRACE_GETREGS, 1, NULL, &regs);
+#endif
 
     // Change the registers to call execve("/init", argv, envp)
+#ifdef __aarch64__
     regs->regs[0] = data_inject_address + 0x10; /* char *filename */
     regs->regs[1] = data_inject_address + 0x00; /* char *argv[] */
     regs->regs[2] = data_inject_address + 0x08; /* char *envp[] */
     regs->pc = execve_address;
     ptrace(PTRACE_SETREGSET, 1, NT_PRSTATUS, &ioVec);
+#else
+    regs.ARM_r0 = data_inject_address + (sizeof(void *) * 2); /* char*  filename */
+    regs.ARM_r1 = data_inject_address + (sizeof(void *) * 0); /* char** argp */
+    regs.ARM_r2 = data_inject_address + (sizeof(void *) * 1); /* char** envp */
+    regs.ARM_pc = execve_address;
+    ptrace(PTRACE_SETREGS, 1, NULL, &regs);
+#endif
 
     // Detach the ptrace
     ptrace(PTRACE_DETACH, 1, NULL, NULL);
@@ -238,29 +266,30 @@ int main(int argc, char **argv)
     // Modify the selinux policy to make init permissive
     selinux_permissive();
 
-    // Check to see if the ramdisk is on /system
-    if (stat(SYSTEM_RECOVERY_RAMDISK, &sStat) == -1)
+    // sloane needs USB to be enabled
+    FILE *mode = fopen("/sys/devices/bus.8/11270000.SSUSB/mode", "w");
+    if (mode)
     {
-        // It's not on /system, enable USB
-        FILE *mode = fopen("/sys/devices/bus.8/11270000.SSUSB/mode", "w");
         fwrite("1", 1, 1, mode);
         fclose(mode);
         sleep(3);
-
-        // Check for it on secondary storage
-        char *devices[] = { "/dev/block/mmcblk1", "/dev/block/mmcblk1p1",
-                            "/dev/block/sda", "/dev/block/sda1" };
-        int i;
-        for (i = 0; i < (sizeof(devices) / sizeof(char *)) && (ramdisk_path == NULL); i++)
-        {
-            mount(devices[i], MNT_DIR, "vfat", 0, NULL);
-            if (stat(MNT_RECOVERY_RAMDISK, &sStat) == 0)
-                ramdisk_path = MNT_RECOVERY_RAMDISK;
-            else
-                umount(MNT_DIR);
-        }
     }
-    else
+
+    // Check for the ramdisk on secondary storage first
+    char *devices[] = { "/dev/block/mmcblk1", "/dev/block/mmcblk1p1",
+                        "/dev/block/sda", "/dev/block/sda1" };
+    int i;
+    for (i = 0; i < (sizeof(devices) / sizeof(char *)) && (ramdisk_path == NULL); i++)
+    {
+        mount(devices[i], MNT_DIR, "vfat", 0, NULL);
+        if (stat(MNT_RECOVERY_RAMDISK, &sStat) == 0)
+            ramdisk_path = MNT_RECOVERY_RAMDISK;
+        else
+            umount(MNT_DIR);
+    }
+
+    // If the ramdisk wasn't found, try /system
+    if (ramdisk_path == NULL && stat(SYSTEM_RECOVERY_RAMDISK, &sStat) == 0)
         ramdisk_path = SYSTEM_RECOVERY_RAMDISK;
 
     // If the ramdisk was found
@@ -273,9 +302,14 @@ int main(int argc, char **argv)
         if (!strcmp(ramdisk_path, MNT_RECOVERY_RAMDISK))
             umount(MNT_DIR);
 
+        // stop adbd
+        system("/system/bin/setprop ctl.stop adbd");
+
         // Use ptrace to replace init
         replace_init();
+
+        return 0;
     }
 
-    return 0;
+    return -1;
 }
