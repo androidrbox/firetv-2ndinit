@@ -55,6 +55,7 @@ static void selinux_permissive(void)
 
     // Make init, recovery, and ueventd permissive
     set_permissive("init", &policydb);
+    set_permissive("init_shell", &policydb);
     set_permissive("recovery", &policydb);
     set_permissive("ueventd", &policydb);
 
@@ -301,9 +302,6 @@ int main(int argc, char **argv)
         // Unmount secondary storage if the ramdisk was on it
         if (!strcmp(ramdisk_path, MNT_RECOVERY_RAMDISK))
             umount(MNT_DIR);
-
-        // stop adbd
-        system("/system/bin/setprop ctl.stop adbd");
 
         // Use ptrace to replace init
         replace_init();

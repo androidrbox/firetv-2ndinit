@@ -36,12 +36,20 @@ int main(int argc, char **argv)
     int r;
     struct stat sStat;
 
-    // bueller runs 2ndinitstub as e2fsck
+    // bueller and montoya run 2ndinitstub as e2fsck
     if (!strcmp(argv[0], "/system/bin/e2fsck"))
     {
-        // if not run as -fy /dev/block/platform/msm_sdcc.1/by-name/userdata, run e2fsck.real instead
-        if (argc < 3 || strcmp(argv[1], "-fy") != 0
-                || strcmp(argv[2], "/dev/block/platform/msm_sdcc.1/by-name/userdata") != 0)
+        // Override -fy /dev/block/platform/msm_sdcc.1/by-name/userdata on bueller
+        if (argc == 3 && !strcmp(argv[1], "-fy") && !strcmp(argv[2], "/dev/block/platform/msm_sdcc.1/by-name/userdata"))
+        {
+            // continue below
+        }
+        // Override -y /dev/block/platform/sdhci.1/by-name/userdata on montoya
+        else if (argc == 3 && !strcmp(argv[1], "-y") && !strcmp(argv[2], "/dev/block/platform/sdhci.1/by-name/userdata"))
+        {
+            // continue below
+        }
+        else
         {
             argv[0] = "/system/bin/e2fsck.real";
             return execv(argv[0], argv);
@@ -49,8 +57,13 @@ int main(int argc, char **argv)
     }
 
     /* check /cache for the bypass flag
-     * it must be mounted on sloane, but is already mounted for others */
+     * it must be mounted on montoya and sloane. */
     r = mount("/dev/block/platform/mtk-msdc.0/by-name/cache", "/cache", "ext4", 0, NULL);
+    if (r == -1)
+    {
+        /* montoya mount point */
+        r = mount("/dev/block/platform/sdhci.1/by-name/cache", "/cache", "ext4", 0, NULL);
+    }
     if (stat(BYPASS_2NDINIT, &sStat) == 0)
     {
         // If the bypass flag exists, delete the file and boot normally.
